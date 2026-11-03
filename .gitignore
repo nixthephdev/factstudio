@@ -1,0 +1,17 @@
+/storage/*
+!/storage/.htaccess
+!/storage/.gitkeep
+/tools/*
+!/tools/.gitkeep
+/.env
+/tests/tmp/
+/backups/
+*.factbackup
+*.recovery-key.txt
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.key
+*.log
+/.idea/
+/.vscode/

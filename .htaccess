@@ -1,0 +1,8 @@
+Options -Indexes
+DirectoryIndex index.php
+<FilesMatch "^(\.|composer\.|README|router\.php)">
+  Require all denied
+</FilesMatch>
+RewriteEngine On
+RewriteRule (^|/)\. - [F,L]
+RewriteRule ^(?:app|bin|scripts|storage|tests|tools|workflows)(?:/|$) - [F,L]
