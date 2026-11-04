@@ -20,7 +20,7 @@ final class Voice {
             $audio=base64_decode($response['audio_base64']??'',true);
             if($audio===false||strlen($audio)<100){throw new \RuntimeException('ElevenLabs returned no usable audio.');}
             file_put_contents($directory.'/voice.mp3',$audio);
-            $result=['file'=>'voice.mp3','alignment'=>$response['normalized_alignment']??$response['alignment']??null,'provider'=>'ElevenLabs'];
+            $result=['file'=>'voice.mp3','alignment'=>$response['normalized_alignment']??$response['alignment']??null,'original_alignment'=>$response['alignment']??null,'provider'=>'ElevenLabs'];
         }
         file_put_contents($meta,json_encode($result,JSON_THROW_ON_ERROR));return $result;
     }

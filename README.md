@@ -4,6 +4,8 @@ A local PHP studio for original illustrated shorts. Compatible with the PHP 8.0 
 
 **Moving to another PC:** see [HOME-SETUP.md](HOME-SETUP.md). Clone the source, restore your separate encrypted connection backup, and install the local tools for the new machine. Credentials and model installations are excluded from Git.
 
+**Returning to the office PC:** read [the work PC handoff](WORK-PC-2026-11-04.md) and [Instagram reconnection instructions](OFFICE-INSTAGRAM.md). Keep the office library and installed tools; reconnect Instagram locally without carrying credentials through Git.
+
 ## Open the studio
 
 ```powershell

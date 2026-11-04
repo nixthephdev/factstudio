@@ -52,6 +52,18 @@ powershell -ExecutionPolicy Bypass -File scripts/register-schedule.ps1
 
 Run scheduled production on one PC at a time to avoid competing queues and duplicate posts.
 
+## Instagram video tunnel on this PC
+
+After starting the studio on port 8085, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/start-instagram-tunnel.ps1
+```
+
+This downloads the official Cloudflare connector, checks its SHA-256 digest, starts it in the background, and saves its HTTPS address in Connections. Only signed video links can pass the studio's public access checks; the dashboard and API remain local-only. No Cloudflare account is needed for this temporary Quick Tunnel.
+
+Keep the PC awake and the connector running while Instagram fetches a video. After restarting Windows, start the studio and run this command again. Quick Tunnel addresses change when the connector restarts; the script updates Connections automatically. For a permanent publishing address, configure a named Cloudflare Tunnel with your own domain.
+
 ## Make another backup later
 
 Wait for the worker to finish, then choose a new output filename:

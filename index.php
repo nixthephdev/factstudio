@@ -49,6 +49,8 @@ if($action==='media'){
 }
 
 session_name('FACTSTUDIO');
+// Keep sessions with this app instead of relying on XAMPP's shared temp permissions.
+session_save_path(storage('sessions'));
 session_set_cookie_params(['httponly'=>true,'samesite'=>'Lax','path'=>'/']);
 session_start();
 if(empty($_SESSION['csrf'])){$_SESSION['csrf']=bin2hex(random_bytes(32));}

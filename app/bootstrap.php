@@ -28,7 +28,7 @@ function json(array $data, int $status = 200): void {
 }
 function now(): string { return date('c'); }
 
-foreach (['', 'jobs', 'logs'] as $folder) {
+foreach (['', 'jobs', 'logs', 'sessions'] as $folder) {
     if (!is_dir(storage($folder))) { mkdir(storage($folder), 0700, true); }
 }
 

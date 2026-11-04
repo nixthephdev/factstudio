@@ -7,6 +7,7 @@ final class Http {
         $ch=curl_init($url); $output=''; $responseHeaders=[];
         $headers[]='User-Agent: FACTStudio/1.0 (local content production)';
         curl_setopt_array($ch,[CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_HTTPHEADER=>$headers,CURLOPT_CONNECTTIMEOUT=>8,CURLOPT_TIMEOUT=>$timeout,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_PROTOCOLS=>CURLPROTO_HTTP|CURLPROTO_HTTPS,CURLOPT_WRITEFUNCTION=>function($ch,$chunk)use(&$output,$maxBytes){if(strlen($output)+strlen($chunk)>$maxBytes){return 0;}$output.=$chunk;return strlen($chunk);},CURLOPT_HEADERFUNCTION=>function($ch,$line)use(&$responseHeaders){$parts=explode(':',$line,2);if(count($parts)===2){$responseHeaders[strtolower(trim($parts[0]))]=trim($parts[1]);}return strlen($line);}]);
+        if(strtoupper($method)==='HEAD'){curl_setopt($ch,CURLOPT_NOBODY,true);}
         if($body!==null){curl_setopt($ch,CURLOPT_POSTFIELDS,is_array($body)?http_build_query($body):$body);}
         $ok=curl_exec($ch); $status=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE); $error=curl_error($ch);curl_close($ch);
         if($ok===false){throw new \RuntimeException('Connection failed to '.parse_url($url,PHP_URL_HOST).': '.$error);}
