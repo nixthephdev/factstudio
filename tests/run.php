@@ -55,4 +55,9 @@ if(Fact\Process::binary('ffmpeg')&&Fact\Process::binary('ffprobe')){
     (new Pipeline())->run(db()->job($preview));
     check(db()->job($preview)['status']==='ready'&&(int)db()->query('SELECT COUNT(*) FROM publications WHERE job_id=?',[$preview])->fetchColumn()===0,'AI preview ignores automatic publishing even with a destination enabled');
 }
+$motionGraph=Fact\MotionVideo::workflow('A rolling ocean','local-test.safetensors',123,'test_motion');
+check($motionGraph['4']['class_type']==='ADE_AnimateDiffLoaderGen1'&&$motionGraph['4']['inputs']['context_options']===['3',0]&&$motionGraph['7']['inputs']['batch_size']===16,'Motion workflow uses temporal sampling with bounded context windows');
+check($motionGraph['1']['inputs']['ckpt_name']==='local-test.safetensors'&&$motionGraph['8']['inputs']['seed']===123&&strpos($motionGraph['5']['inputs']['text'],'A rolling ocean')!==false,'Motion workflow preserves the selected checkpoint, prompt and reproducible seed');
+rejects(fn()=>(new Fact\MotionVideo())->run(['mode'=>'live','data'=>['adapter'=>'animatelcm']]),'Motion adapter refuses live or publishing jobs before generation');
+
 echo "\n$passed checks passed. No paid API calls were made.\n";

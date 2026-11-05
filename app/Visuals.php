@@ -41,8 +41,6 @@ final class Visuals {
         for($i=0;$i<140;$i++){$x=($i*173+41)%720;$y=($i*277+79)%1280;$c=imagecolorallocate($im,130+($i%100),150+($i%90),190+($i%60));imagefilledellipse($im,$x,$y,$i%4+1,$i%4+1,$c);}
         $colors=[[255,183,77],[130,168,220],[238,125,83],[174,198,229]];$rgb=$colors[$scene%4];
         for($r=210;$r>0;$r--){$shade=0.5+0.5*(1-$r/210);$c=imagecolorallocate($im,(int)($rgb[0]*$shade),(int)($rgb[1]*$shade),(int)($rgb[2]*$shade));imagefilledellipse($im,(int)(360-$r/9),(int)(520-$r/9),$r*2,$r*2,$c);}
-        $white=imagecolorallocate($im,235,239,247);$accent=imagecolorallocate($im,249,134,91);$font='C:/Windows/Fonts/segoeuib.ttf';
-        if(is_file($font)){imagettftext($im,16,0,44,80,$accent,$font,'FACT / SAMPLE FILM');imagettftext($im,39,0,44,870,$white,$font,['A little closer','Eight minutes','Across the sky','Stay curious'][$scene%4]);imagettftext($im,16,0,44,920,$white,'C:/Windows/Fonts/segoeui.ttf','Demo artwork / no AI credits used');}
         imagepng($im,$file);imagedestroy($im);
     }
 }

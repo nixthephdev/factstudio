@@ -27,7 +27,6 @@ final class Renderer {
         $probe=json_decode(Process::run([$ffprobe,'-v','error','-show_entries','format=duration','-of','json',$directory.'/'.$voice['file']],$directory,20),true);
         $duration=(float)($probe['format']['duration']??0);
         if($duration<5||$duration>90){throw new \RuntimeException('Narration must be between 5 and 90 seconds.');}
-        file_put_contents($directory.'/captions.ass',self::captions($script['narration'],$voice['alignment'],$duration));
         $total=max(1,array_sum(array_map(fn($s)=>mb_strlen($s['narration']),$script['scenes'])));$concat=[];
         foreach($images as$i=>$image){
             $length=$duration*mb_strlen($script['scenes'][$i]['narration'])/$total+0.08;
@@ -37,7 +36,7 @@ final class Renderer {
             $concat[]="file '".$segment."'";
         }
         file_put_contents($directory.'/segments.txt',implode("\n",$concat));
-        Process::run([$ffmpeg,'-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i','segments.txt','-i',$voice['file'],'-t',sprintf('%.3f',$duration),'-vf','ass=captions.ass','-af','loudnorm=I=-16:TP=-1.5:LRA=11','-c:v','libx264','-preset','veryfast','-crf','23','-threads','4','-pix_fmt','yuv420p','-c:a','aac','-b:a','160k','-ar','48000','-ac','2','-movflags','+faststart','final.mp4'],$directory,900);
+        Process::run([$ffmpeg,'-hide_banner','-loglevel','error','-y','-f','concat','-safe','0','-i','segments.txt','-i',$voice['file'],'-t',sprintf('%.3f',$duration),'-af','loudnorm=I=-16:TP=-1.5:LRA=11','-c:v','libx264','-preset','veryfast','-crf','23','-threads','4','-pix_fmt','yuv420p','-c:a','aac','-b:a','160k','-ar','48000','-ac','2','-movflags','+faststart','final.mp4'],$directory,900);
         $check=json_decode(Process::run([$ffprobe,'-v','error','-show_streams','-show_format','-of','json','final.mp4'],$directory,20),true);
         $video=null;$audio=false;foreach($check['streams']??[]as$stream){if($stream['codec_type']==='video'){$video=$stream;}if($stream['codec_type']==='audio'){$audio=true;}}
         if(!$audio||!$video||$video['width']!==720||$video['height']!==1280||abs((float)$check['format']['duration']-$duration)>1){throw new \RuntimeException('Rendered video failed its audio, dimensions or duration check.');}

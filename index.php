@@ -81,7 +81,7 @@ if($action==='api'){
             if($mode==='live'&&(settings()->get('eleven_api_key')===''||settings()->get('eleven_voice')==='')){throw new RuntimeException('Connect your ElevenLabs key and voice in Connections first, or choose Free AI preview to make a video without paid credits.');}
             $pending=(int)db()->query("SELECT COUNT(*) FROM jobs WHERE status IN ('queued','running','publishing')")->fetchColumn();if($pending>=3){throw new RuntimeException('There are already three active jobs. Let the queue finish first.');}
             if($mode==='live'){$today=(int)db()->query("SELECT COUNT(*) FROM jobs WHERE mode='live' AND substr(created_at,1,10)=?",[date('Y-m-d')])->fetchColumn();if($today>=(int)settings()->get('daily_limit')){throw new RuntimeException('Daily video limit reached. You can adjust the limit in Automation.');}}
-            $id=db()->createJob((string)$mode,$topic);session_write_close();Process::launchWorker();json(['id'=>$id]);
+            $id=$mode==='motion'?Fact\MotionVideo::create($topic):db()->createJob((string)$mode,$topic);session_write_close();Process::launchWorker();json(['id'=>$id]);
         }
         if($operation==='retry'){
             $job=db()->job((int)($input['id']??0));if(!in_array($job['status'],['blocked','ready','failed'],true)){throw new RuntimeException('This job cannot be retried while it is active.');}

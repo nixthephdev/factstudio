@@ -15,6 +15,7 @@ final class Pipeline {
     public function run(array $job): void {
         $id=(int)$job['id'];$data=$job['data'];$demo=$job['mode']==='demo';$preview=$job['mode']==='preview';$freeVoice=$demo||$preview;$directory=storage('jobs/'.$id);if(!is_dir($directory)){mkdir($directory,0700,true);}
         try{
+            if(($data['adapter']??'')==='animatelcm'){(new MotionVideo())->run($job);return;}
             if(!Process::binary('ffmpeg')||!Process::binary('ffprobe')){throw new \RuntimeException('Install FFmpeg using scripts/install-ffmpeg.ps1, then retry.');}
             if(!$freeVoice&&!isset($data['voice'])&&(settings()->get('eleven_api_key')===''||settings()->get('eleven_voice')==='')){throw new \RuntimeException('Connect your ElevenLabs key and voice in Connections, or use Free AI preview.');}
             if($demo){
@@ -27,7 +28,7 @@ final class Pipeline {
             }
             if(!isset($data['images'])){$this->stage($id,'visuals',$demo?'Drawing four sample scenes.':'Generating four original illustrations in ComfyUI.');$data['images']=(new Visuals())->generate($data['script']['scenes'],$directory,$demo);db()->update($id,['data'=>$data]);}
             if(!isset($data['voice'])){$this->stage($id,'voice',$freeVoice?'Recording free Windows preview narration.':'Generating ElevenLabs narration within your daily character limit.');$data['voice']=(new Voice())->generate($id,$data['script']['narration'],$directory,$freeVoice);db()->update($id,['data'=>$data]);}
-            if(!isset($data['video'])){$this->stage($id,'render','Assembling scenes, captions and narration into a vertical MP4.');$data['video']=(new Renderer())->render($directory,$data['script'],$data['voice'],$data['images']);db()->update($id,['data'=>$data]);}
+            if(!isset($data['video'])){$this->stage($id,'render','Assembling scenes and narration into a vertical MP4 without text overlays.');$data['video']=(new Renderer())->render($directory,$data['script'],$data['voice'],$data['images']);db()->update($id,['data'=>$data]);}
             if($job['mode']==='live'&&settings()->get('auto_publish')==='1'){
                 if(!isset($data['targets'])){$data['targets']=[];foreach(['youtube','facebook','instagram']as$platform){if(settings()->get($platform.'_enabled')==='1'){$data['targets'][]=$platform;}}db()->update($id,['data'=>$data]);}
                 $this->stage($id,'publish','Sending the finished video to connected destinations.');db()->update($id,['status'=>'publishing']);$job=db()->job($id);$data['publications']=(new Publishers())->publish($job,$directory);db()->update($id,['status'=>'published','data'=>$data,'error'=>null]);db()->event($id,'All selected destinations confirmed the publication.');

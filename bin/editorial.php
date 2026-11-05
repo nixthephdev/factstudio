@@ -40,8 +40,6 @@ try {
     $data=['sources'=>$sources,'production_note'=>'Curated NASA visuals and original editorial motion graphics with '.($paid?'ElevenLabs narration. Manually rendered; no publishing was requested.':'free Windows narration. This quality study cannot publish.'),'script'=>['title'=>$paid?'Daylight is old news. Literally.':'Your daylight is a message from the past','description'=>'A source-backed editorial quality study using credited NASA visuals.','narration'=>$narration,'scenes'=>$scenes]];
     db()->update($id,['status'=>'running','stage'=>'voice','title'=>$data['script']['title'],'data'=>$data,'error'=>null]);
     db()->event($id,$paid?'User requested ElevenLabs narration. Hook, curiosity, payoff and closing reframe. No publishing.':'Building a curated NASA editorial study. No paid generation or publishing.');
-    $font='C:/Windows/Fonts/seguisb.ttf';$bold='C:/Windows/Fonts/segoeuib.ttf';
-    if (!is_file($font) || !is_file($bold)) { throw new RuntimeException('Segoe UI fonts were not found.'); }
     $probe=function(string $file)use($ffprobe,$directory):array{return json_decode(Process::run([$ffprobe,'-v','error','-show_streams','-show_format','-of','json',$file],$directory,30),true,512,JSON_THROW_ON_ERROR);};
     $sceneAlignments=[];
     if($paid){
@@ -81,32 +79,13 @@ try {
             Process::run(['powershell.exe','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',Fact\ROOT.'/scripts/editorial-voice.ps1','-TextFile',$text,'-OutputFile',$voice],Fact\ROOT,90);
         }
         $duration=(float)$probe($voice)['format']['duration']+($paid?0:0.25);$total+=$duration;
-        if($paid){file_put_contents($directory.'/editorial-captions-'.$i.'.ass',Fact\Renderer::captions($scene['narration'],$sceneAlignments[$i],$duration));}
         $canvas=imagecreatetruecolor(720,1280);imagesavealpha($canvas,true);imagealphablending($canvas,false);imagefill($canvas,0,0,imagecolorallocatealpha($canvas,0,0,0,127));imagealphablending($canvas,true);
-        $white=imagecolorallocate($canvas,248,247,241);$muted=imagecolorallocate($canvas,157,169,181);$orange=imagecolorallocate($canvas,255,173,83);
-        // Dark top and bottom gradients preserve both imagery and legible type.
-        for($y=0;$y<1280;$y++) {
-            $opacity=$y<400?0.9*(1-$y/470):($y>750?min(0.96,($y-750)/400):0);
-            if($opacity>0){imageline($canvas,0,$y,719,$y,imagecolorallocatealpha($canvas,4,9,16,(int)(127*(1-$opacity))));}
-        }
+        $orange=imagecolorallocate($canvas,255,173,83);
         if($scene['visual']==='diagram'){
             for($radius=110;$radius>60;$radius-=4){imagefilledellipse($canvas,90,537,$radius,$radius,imagecolorallocatealpha($canvas,255,162,63,123));}
             imagefilledellipse($canvas,90,537,60,60,$orange);
             imagefilledellipse($canvas,621,537,34,34,imagecolorallocate($canvas,84,184,226));
-            imagettftext($canvas,16,0,72,600,$white,$bold,'SUN');
-            imagettftext($canvas,16,0,587,600,$white,$bold,'EARTH');
         }
-        imagettftext($canvas,15,0,42,60,$orange,$bold,'FACT / SPACE NOTES');
-        imagettftext($canvas,13,0,606,60,$muted,$font,sprintf('%02d / 05',$i+1));
-        imageline($canvas,42,83,678,83,imagecolorallocatealpha($canvas,255,255,255,100));
-        imagettftext($canvas,13,0,43,128,$orange,$bold,$scene['label']);
-        foreach($scene['title'] as $line=>$text){imagettftext($canvas,34,0,40,188+$line*51,$white,$bold,$text);}
-        $size=$i===1?55:($i===2?48:($i===4?100:($paid?50:68)));
-        imagettftext($canvas,$size,0,40,950,$orange,$bold,$scene['number']);
-        if(!$paid){foreach($scene['caption'] as $line=>$text){imagettftext($canvas,31,0,42,1024+$line*43,$white,$bold,$text);}}
-        $credit=$scene['foot'];imagettftext($canvas,10,0,42,1194,$muted,$font,$credit);
-        imageline($canvas,42,1230,678,1230,imagecolorallocatealpha($canvas,255,255,255,100));
-        imagefilledrectangle($canvas,42,1228,42+(int)(636*($i+1)/5),1232,$orange);
         $overlay=$directory.'/editorial-overlay-'.$i.'.png';imagepng($canvas,$overlay);imagedestroy($canvas);
         $output='editorial-segment-'.$i.'.mp4';
         $args=[$ffmpeg,'-hide_banner','-loglevel','error','-y'];
@@ -121,8 +100,7 @@ try {
             $background="[0:v]drawgrid=w=60:h=60:t=1:c=0x172337@0.45,drawbox=x=80:y=535:w=560:h=2:c=0xffac53@0.4:t=fill[diagram];color=c=0xffde9e:s=18x8:r=30[photon];[diagram][photon]overlay=x='90+min(t*85,510)':y=532[bg];";
         }
         array_push($args,'-loop','1','-i',$overlay,'-i',$voice);
-        $subtitleFilter=$paid?'ass=editorial-captions-'.$i.'.ass,':'';
-        $filter=$background."[bg][1:v]overlay=0:0:shortest=1,".$subtitleFilter."fade=t=in:st=0:d=0.12,fade=t=out:st=".sprintf('%.3f',max(0,$duration-.15)).":d=0.15,format=yuv420p[v];[2:a]apad,atrim=duration=".sprintf('%.3f',$duration).",aresample=48000,aformat=channel_layouts=stereo[a]";
+        $filter=$background."[bg][1:v]overlay=0:0:shortest=1,fade=t=in:st=0:d=0.12,fade=t=out:st=".sprintf('%.3f',max(0,$duration-.15)).":d=0.15,format=yuv420p[v];[2:a]apad,atrim=duration=".sprintf('%.3f',$duration).",aresample=48000,aformat=channel_layouts=stereo[a]";
         array_push($args,'-filter_complex',$filter,'-map','[v]','-map','[a]','-t',sprintf('%.3f',$duration),'-r','30','-c:v','libx264','-preset','veryfast','-crf','20','-threads','4','-c:a','aac','-b:a','160k','-movflags','+faststart',$output);
         db()->update($id,['stage'=>'render']);Process::run($args,$directory,900);$segments[]="file '$output'";
     }

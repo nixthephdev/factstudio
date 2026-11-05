@@ -2,6 +2,8 @@
 
 A local PHP studio for original illustrated shorts. Compatible with the PHP 8.0 installation in XAMPP. No Composer, Node, paid text API, or database server is required at runtime.
 
+**Short motion tests:** see [LOCAL-ANIMATION.md](LOCAL-ANIMATION.md). **Animate a shot** generates a short, silent temporal-diffusion preview locally. New renders omit text overlays; existing videos keep their original appearance.
+
 **Moving to another PC:** see [HOME-SETUP.md](HOME-SETUP.md). Clone the source, restore your separate encrypted connection backup, and install the local tools for the new machine. Credentials and model installations are excluded from Git.
 
 **Returning to the office PC:** read [the work PC handoff](WORK-PC-2026-11-04.md) and [Instagram reconnection instructions](OFFICE-INSTAGRAM.md). Keep the office library and installed tools; reconnect Instagram locally without carrying credentials through Git.
@@ -19,7 +21,7 @@ The SQLite database and encryption key are created automatically under `storage/
 
 ## A real, free demo
 
-Click **Make a demo film**. This runs a detached PHP worker, draws four sample frames with PHP GD, uses Windows System.Speech for narration, and renders an H.264/AAC MP4 at 720 × 1280 with camera motion and burned-in captions. Demo artwork and narration are explicitly labeled; they are not AI generation. Demo jobs cannot publish.
+Click **Make a demo film**. This runs a detached PHP worker, draws four sample frames with PHP GD, uses Windows System.Speech for narration, and renders an H.264/AAC MP4 at 720 × 1280 with camera motion and no text overlays. Demo artwork and narration are explicitly labeled; they are not AI generation. Demo jobs cannot publish.
 
 FFmpeg is installed locally under `tools/ffmpeg/bin`. To install on another machine:
 
@@ -44,7 +46,7 @@ The writer first chooses four passages, then writes each scene using only its as
 
 After restarting Windows, run `powershell -ExecutionPolicy Bypass -File scripts/start-ai.ps1` to start both project-local AI services without downloading them again.
 
-The writer unloads its model before image generation to conserve the 6 GB GPU. Rendering uses CPU x264. This version animates generated stills; **full text-to-video diffusion is not implemented**. It does not use free cloud demos or promise unlimited cloud generation. Source checks are heuristic and can miss false claims. It makes no earnings or monetization guarantee.
+The writer unloads its model before image generation to conserve the 6 GB GPU. Rendering uses CPU x264. The research/narration pipeline still animates generated stills. The separate **Animate a shot** preview uses AnimateLCM for short, silent generated motion clips; it does not yet replace the full narrated production pipeline. It does not use free cloud demos or promise unlimited cloud generation. Source checks are heuristic and can miss false claims. It makes no earnings or monetization guarantee.
 
 Research currently supports **NASA space and astronomy stories**. It filters used source URLs, restricts article fetches to known NASA HTTPS hosts, treats fetched text as data, and includes source links in publication descriptions. A custom angle must be compatible with the available sources. Competitor research is optional: add a YouTube Data API key and search keywords. Only public metadata is compared; private retention, earnings and transcripts are not obtained.
 
