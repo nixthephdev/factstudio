@@ -1,0 +1,12 @@
+{
+  "1": {"class_type":"CheckpointLoaderSimple","inputs":{"ckpt_name":"v1-5-pruned-emaonly.safetensors"}},
+  "2": {"class_type":"LoraLoader","inputs":{"model":["1",0],"clip":["1",1],"lora_name":"AnimateLCM_sd15_t2v_lora.safetensors","strength_model":1.0,"strength_clip":1.0}},
+  "3": {"class_type":"ADE_StandardUniformContextOptions","inputs":{"context_length":16,"context_stride":1,"context_overlap":4,"fuse_method":"pyramid","use_on_equal_length":false,"start_percent":0.0,"guarantee_steps":1}},
+  "4": {"class_type":"ADE_AnimateDiffLoaderGen1","inputs":{"model":["2",0],"model_name":"AnimateLCM_sd15_t2v.ckpt","beta_schedule":"lcm[100_ots]","context_options":["3",0]}},
+  "5": {"class_type":"CLIPTextEncode","inputs":{"text":"","clip":["2",1]}},
+  "6": {"class_type":"CLIPTextEncode","inputs":{"text":"text, letters, captions, subtitles, watermark, logo, blurry, low quality, deformed, flicker","clip":["2",1]}},
+  "7": {"class_type":"EmptyLatentImage","inputs":{"width":512,"height":512,"batch_size":16}},
+  "8": {"class_type":"KSampler","inputs":{"model":["4",0],"positive":["5",0],"negative":["6",0],"latent_image":["7",0],"seed":42,"steps":8,"cfg":1.5,"sampler_name":"lcm","scheduler":"normal","denoise":1.0}},
+  "9": {"class_type":"VAEDecodeTiled","inputs":{"samples":["8",0],"vae":["1",2],"tile_size":256,"overlap":64,"temporal_size":16,"temporal_overlap":4}},
+  "10": {"class_type":"SaveImage","inputs":{"images":["9",0],"filename_prefix":"fact_motion"}}
+}

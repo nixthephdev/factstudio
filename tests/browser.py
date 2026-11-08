@@ -38,9 +38,11 @@ with sync_playwright() as p:
     page.goto("http://localhost:8085/", wait_until="networkidle")
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     page.screenshot(path=str(root / "storage/dashboard-mobile.png"), full_page=True)
+    # The sample renderer remains available in Guide; Overview now leads with motion.
+    page.goto("http://localhost:8085/?view=guide", wait_until="networkidle")
     # Exercise the browser -> authenticated API -> detached PHP worker -> MP4 path.
     with page.expect_response(lambda r: "action=api" in r.url and r.request.method == "POST") as response:
-        page.get_by_role("button", name="Make a demo film", exact=True).click()
+        page.get_by_role("button", name="Make a demo", exact=True).click()
     created = response.value.json()
     assert "id" in created, created
     job_id = created["id"]
