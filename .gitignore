@@ -15,3 +15,11 @@
 *.log
 /.idea/
 /.vscode/
+/hosted/vendor/
+/hosted/node_modules/
+/hosted/.env
+/hosted/public/build/
+/hosted/public/hot
+/hosted/bootstrap/cache/*
+/hosted/storage/*
+/hosted/database/*.sqlite*

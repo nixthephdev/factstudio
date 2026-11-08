@@ -35,7 +35,7 @@ final class Database {
     }
     public function jobs(): array {
         $rows = $this->query('SELECT * FROM jobs ORDER BY id DESC LIMIT 60')->fetchAll();
-        foreach ($rows as &$row) { $data = json_decode($row['data'], true) ?: []; $row['data'] = array_intersect_key($data,array_flip(['video','images','publications'])); unset($row['schedule_key']); }
+        foreach ($rows as &$row) { $data = json_decode($row['data'], true) ?: []; $row['data'] = array_intersect_key($data,array_flip(['video','images','publications','review'])); unset($row['schedule_key']); }
         return $rows;
     }
     public function update(int $id, array $values): void {

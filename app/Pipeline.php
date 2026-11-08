@@ -28,13 +28,23 @@ final class Pipeline {
             if(!isset($data['images'])){$this->stage($id,'visuals',$demo?'Drawing four sample scenes.':'Generating four original illustrations in ComfyUI.');$data['images']=(new Visuals())->generate($data['script']['scenes'],$directory,$demo);db()->update($id,['data'=>$data]);}
             if(!isset($data['voice'])){$this->stage($id,'voice',$freeVoice?'Recording free Windows preview narration.':'Generating ElevenLabs narration within your daily character limit.');$data['voice']=(new Voice())->generate($id,$data['script']['narration'],$directory,$freeVoice);db()->update($id,['data'=>$data]);}
             if(!isset($data['video'])){$this->stage($id,'render','Assembling scenes, captions and narration into a vertical MP4.');$data['video']=(new Renderer())->render($directory,$data['script'],$data['voice'],$data['images']);db()->update($id,['data'=>$data]);}
-            if($job['mode']==='live'&&settings()->get('auto_publish')==='1'){
+            if($job['mode']==='live'&&settings()->get('review_required')==='1'&&($data['review']['state']??'')!=='approved'){
+                $data['review']=['state'=>'pending'];
+                db()->update($id,['status'=>'ready','stage'=>'review','data'=>$data,'error'=>null]);
+                db()->event($id,'Video is ready for review. Watch it and approve publishing from the library.');
+                return;
+            }
+            if($job['mode']==='live'&&(settings()->get('auto_publish')==='1'||!empty($data['publish_requested']))){
                 if(!isset($data['targets'])){$data['targets']=[];foreach(['youtube','facebook','instagram']as$platform){if(settings()->get($platform.'_enabled')==='1'){$data['targets'][]=$platform;}}db()->update($id,['data'=>$data]);}
+                if(settings()->get('remote_hub_url')!==''&&in_array('instagram',$data['targets'],true)){
+                    $this->stage($id,'publish','Syncing the finished video to the hosted dashboard for Instagram.');(new Hub())->sync(true,false);$data=db()->job($id)['data'];
+                }
                 $this->stage($id,'publish','Sending the finished video to connected destinations.');db()->update($id,['status'=>'publishing']);$job=db()->job($id);$data['publications']=(new Publishers())->publish($job,$directory);db()->update($id,['status'=>'published','data'=>$data,'error'=>null]);db()->event($id,'All selected destinations confirmed the publication.');
             }else{db()->update($id,['status'=>'ready','stage'=>'complete','data'=>$data,'error'=>null]);db()->event($id,$freeVoice?'Preview MP4 is ready. It will never be published.':'MP4 is ready. Automatic publishing is currently off.');}
         }catch(\Throwable $e){$message=settings()->redact($e->getMessage());db()->update($id,['status'=>'blocked','error'=>$message]);db()->event($id,'Production paused: '.$message);}
     }
     public function tick(): ?int {
+        Monitor::recordTick();
         $s=settings();if($s->get('schedule_enabled')!=='1'||date('H:i')<$s->get('publish_time')){return null;}
         // One scheduled slot per day. Additional manually queued jobs count toward the daily cap.
         $count=(int)db()->query("SELECT COUNT(*) FROM jobs WHERE mode='live' AND substr(created_at,1,10)=?",[date('Y-m-d')])->fetchColumn();

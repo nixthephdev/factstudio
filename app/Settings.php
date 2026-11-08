@@ -6,7 +6,7 @@ final class Settings {
     private Database $db;
     public const DEFAULTS = [
         'studio_name'=>'FACT Studio', 'niche'=>'Space and astronomy explained simply', 'language'=>'English',
-        'duration'=>'40', 'daily_limit'=>'1', 'publish_time'=>'18:00', 'schedule_enabled'=>'0', 'auto_publish'=>'0',
+        'duration'=>'40', 'daily_limit'=>'1', 'publish_time'=>'18:00', 'schedule_enabled'=>'0', 'auto_publish'=>'0', 'review_required'=>'1',
         'ollama_url'=>'http://127.0.0.1:11434', 'ollama_model'=>'qwen3:4b',
         'comfy_url'=>'http://127.0.0.1:8188', 'comfy_checkpoint'=>'v1-5-pruned-emaonly.safetensors',
         'eleven_voice'=>'', 'eleven_model'=>'eleven_multilingual_v2', 'speech_limit'=>'2500',
@@ -14,9 +14,9 @@ final class Settings {
         'youtube_privacy'=>'public', 'youtube_enabled'=>'0', 'youtube_channel'=>'',
         'google_client_id'=>'', 'app_url'=>'http://localhost:8085/',
         'facebook_page_id'=>'', 'facebook_enabled'=>'0', 'instagram_id'=>'', 'instagram_enabled'=>'0',
-        'instagram_video_base'=>'', 'graph_version'=>'v23.0'
+        'instagram_video_base'=>'', 'graph_version'=>'v23.0', 'remote_hub_url'=>''
     ];
-    public const SECRETS = ['eleven_api_key','youtube_api_key','google_client_secret','google_refresh_token','facebook_token','instagram_token'];
+    public const SECRETS = ['eleven_api_key','youtube_api_key','google_client_secret','google_refresh_token','facebook_token','instagram_token','remote_hub_token'];
     public function __construct(Database $db) { $this->db = $db; }
     private function key(): string {
         $path = storage('secret.key');
@@ -65,13 +65,14 @@ final class Settings {
             if (in_array($key,['ollama_url','comfy_url'],true) && !preg_match('~^http://(127\.0\.0\.1|localhost):[0-9]{2,5}/?$~',$value)) { throw new \InvalidArgumentException('Local AI addresses must use localhost or 127.0.0.1 and a port.'); }
             if ($key === 'app_url' && !preg_match('~^http://(localhost|127\.0\.0\.1)(:[0-9]{2,5})?(/[a-zA-Z0-9_-]+)*/?$~',$value)) { throw new \InvalidArgumentException('Use your local studio URL for the OAuth callback.'); }
             if ($key === 'instagram_video_base' && $value !== '' && !filter_var($value,FILTER_VALIDATE_URL)) { throw new \InvalidArgumentException('Invalid public video URL.'); }
+            if ($key === 'remote_hub_url' && $value !== '' && !Hub::validUrl($value)) { throw new \InvalidArgumentException('The hosted dashboard must use a valid HTTPS address.'); }
             if ($key === 'duration') { $value = (string) max(20,min(60,(int)$value)); }
             if ($key === 'daily_limit') { $value = (string) max(1,min(3,(int)$value)); }
             if ($key === 'speech_limit') { $value = (string) max(0,min(20000,(int)$value)); }
             if ($key === 'publish_time' && !preg_match('/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/',$value)) { throw new \InvalidArgumentException('Invalid production time.'); }
             if ($key === 'youtube_privacy' && !in_array($value,['public','private','unlisted'],true)) { throw new \InvalidArgumentException('Invalid YouTube visibility.'); }
             if ($key === 'graph_version' && !preg_match('/^v[0-9]{2}\.0$/',$value)) { throw new \InvalidArgumentException('Invalid Graph API version.'); }
-            if (substr($key,-8)==='_enabled' || $key==='auto_publish') { $value = $value === '1' ? '1' : '0'; }
+            if (substr($key,-8)==='_enabled' || in_array($key,['auto_publish','review_required'],true)) { $value = $value === '1' ? '1' : '0'; }
             $this->set($key,$value);
         }
     }

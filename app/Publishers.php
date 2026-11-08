@@ -26,6 +26,7 @@ final class Publishers {
     }
     public function publish(array $job,string $directory): array {
         if($job['mode']!=='live'){throw new \RuntimeException('Demo and preview videos cannot be published.');}
+        Review::assertApproved($job);
         $results=[];$targets=$job['data']['targets']??[];
         foreach($targets as$platform){
             $saved=$this->saved((int)$job['id'],$platform);
@@ -94,11 +95,11 @@ final class Publishers {
         return $expires>=time()&&$expires<=time()+7200&&is_file(storage('media.key'))&&hash_equals(self::mediaToken($id,$expires),$token);
     }
     private function instagram(array $job,array $saved): string {
-        $id=(int)$job['id'];$token=settings()->get('instagram_token');$account=settings()->get('instagram_id');$base=settings()->get('instagram_video_base');
-        if($token===''||!ctype_digit($account)||parse_url($base,PHP_URL_SCHEME)!=='https'){throw new \RuntimeException('Instagram needs a professional account ID, a Facebook-login publishing token and a public HTTPS studio URL. See the setup guide.');}
+        $id=(int)$job['id'];$token=settings()->get('instagram_token');$account=settings()->get('instagram_id');$base=settings()->get('instagram_video_base');$hosted=$job['data']['hosted_media_url']??'';$hub=rtrim(settings()->get('remote_hub_url'),'/');$useHosted=$hub!==''&&strpos($hosted,$hub.'/video/')===0;
+        if($token===''||!ctype_digit($account)||(!$useHosted&&parse_url($base,PHP_URL_SCHEME)!=='https')){throw new \RuntimeException('Instagram needs a professional account ID, a Facebook-login publishing token and a public HTTPS studio URL. See the setup guide.');}
         if($saved['state']==='publishing'){throw new \RuntimeException('Instagram publication was submitted but not confirmed. Check Instagram before retrying; this job will not submit a duplicate.');}
         $container=$saved['remote_id'];
-        if(!$container){$expires=time()+7200;$videoUrl=rtrim($base,'/').'/index.php?'.http_build_query(['action'=>'media','id'=>$id,'kind'=>'video','expires'=>$expires,'token'=>self::mediaToken($id,$expires)]);$r=$this->graph('POST',$account.'/media',['media_type'=>'REELS','video_url'=>$videoUrl,'caption'=>$job['data']['script']['title']."\n\n".$this->description($job),'share_to_feed'=>'true'],$token);$container=$r['id']??null;if(!$container){throw new \RuntimeException('Instagram did not create a Reel container.');}$this->save($id,'instagram','processing',$container,[]);}
+        if(!$container){$expires=time()+7200;$videoUrl=$useHosted?$hosted:rtrim($base,'/').'/index.php?'.http_build_query(['action'=>'media','id'=>$id,'kind'=>'video','expires'=>$expires,'token'=>self::mediaToken($id,$expires)]);$r=$this->graph('POST',$account.'/media',['media_type'=>'REELS','video_url'=>$videoUrl,'caption'=>$job['data']['script']['title']."\n\n".$this->description($job),'share_to_feed'=>'true'],$token);$container=$r['id']??null;if(!$container){throw new \RuntimeException('Instagram did not create a Reel container.');}$this->save($id,'instagram','processing',$container,[]);}
         for($i=0;$i<30;$i++){$r=$this->graph('GET',$container,['fields'=>'status_code,status'],$token);if(($r['status_code']??'')==='FINISHED'){break;}if(in_array($r['status_code']??'',['ERROR','EXPIRED'],true)){throw new \RuntimeException('Instagram rejected the video container. Check its URL and account access.');}sleep(3);}
         if(($r['status_code']??'')!=='FINISHED'){throw new \RuntimeException('Instagram is still preparing the video. Retry to check the existing container.');}
         $this->save($id,'instagram','publishing',$container,[]);

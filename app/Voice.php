@@ -14,7 +14,15 @@ final class Voice {
         }else{
             $key=settings()->get('eleven_api_key');$voice=settings()->get('eleven_voice');
             if($key===''||$voice===''){throw new \RuntimeException('Add your ElevenLabs API key and voice ID in Connections.');}
+            $requestFile=$directory.'/speech-request.json';
+            $previous=(int)db()->query('SELECT COUNT(*) FROM speech_usage WHERE job_id=?',[$jobId])->fetchColumn();
+            if(is_file($requestFile)||$previous>0){
+                throw new \RuntimeException('An earlier ElevenLabs request may have used credits, but its completed audio is unavailable. Check ElevenLabs request history and restore the saved audio before retrying. No second paid request was sent.');
+            }
             db()->reserveSpeech($jobId,mb_strlen($text),(int)settings()->get('speech_limit'));
+            if(file_put_contents($requestFile,json_encode(['requested_at'=>now(),'characters'=>mb_strlen($text)],JSON_THROW_ON_ERROR),LOCK_EX)===false){
+                throw new \RuntimeException('Cannot save the narration request record. No paid request was sent.');
+            }
             // A timed-out request is not automatically repeated: it may have consumed credits.
             $response=Http::json('POST','https://api.elevenlabs.io/v1/text-to-speech/'.rawurlencode($voice).'/with-timestamps',['text'=>$text,'model_id'=>settings()->get('eleven_model')],['xi-api-key: '.$key],180,18000000);
             $audio=base64_decode($response['audio_base64']??'',true);

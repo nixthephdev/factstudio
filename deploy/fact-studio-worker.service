@@ -1,0 +1,26 @@
+[Unit]
+Description=FACT Studio production worker and scheduler
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=factstudio
+Group=factstudio
+WorkingDirectory=/srv/factstudio
+Environment=FACT_STORAGE=/srv/factstudio/storage
+ExecStart=/usr/bin/php /srv/factstudio/bin/daemon.php --interval=30
+Restart=on-failure
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=1800
+KillMode=mixed
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/srv/factstudio/storage
+
+[Install]
+WantedBy=multi-user.target

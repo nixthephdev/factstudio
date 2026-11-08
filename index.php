@@ -70,7 +70,8 @@ if($action==='api'){
         if($_SERVER['REQUEST_METHOD']==='GET'){
             if(($_GET['resource']??'')==='job'){$job=db()->job((int)($_GET['id']??0));$job['events']=db()->query('SELECT message,created_at FROM events WHERE job_id=? ORDER BY id DESC LIMIT 30',[$job['id']])->fetchAll();$job['publications']=db()->query('SELECT platform,state,remote_id FROM publications WHERE job_id=?',[$job['id']])->fetchAll();json(['job'=>$job]);}
             $usage=(int)db()->query('SELECT COALESCE(SUM(characters),0) FROM speech_usage WHERE day=?',[date('Y-m-d')])->fetchColumn();
-            json(['jobs'=>db()->jobs(),'health'=>Health::inspect(isset($_GET['refresh'])),'settings'=>settings()->publicValues(),'worker'=>Health::workerRunning(),'speech_used'=>$usage,'events'=>db()->query('SELECT * FROM events ORDER BY id DESC LIMIT 12')->fetchAll(),'server_time'=>date('c')]);
+            $health=Health::inspect(isset($_GET['refresh']));
+            json(['jobs'=>db()->jobs(),'health'=>$health,'monitor'=>Fact\Monitor::inspect($health),'settings'=>settings()->publicValues(),'worker'=>Health::workerRunning(),'speech_used'=>$usage,'events'=>db()->query('SELECT * FROM events ORDER BY id DESC LIMIT 12')->fetchAll(),'server_time'=>date('c')]);
         }
         if($_SERVER['REQUEST_METHOD']!=='POST'){json(['error'=>'Method not allowed.'],405);}
         if(!hash_equals($csrf,(string)($_SERVER['HTTP_X_CSRF_TOKEN']??''))){json(['error'=>'Session expired. Reload the page.'],403);}
@@ -83,12 +84,15 @@ if($action==='api'){
             if($mode==='live'){$today=(int)db()->query("SELECT COUNT(*) FROM jobs WHERE mode='live' AND substr(created_at,1,10)=?",[date('Y-m-d')])->fetchColumn();if($today>=(int)settings()->get('daily_limit')){throw new RuntimeException('Daily video limit reached. You can adjust the limit in Automation.');}}
             $id=db()->createJob((string)$mode,$topic);session_write_close();Process::launchWorker();json(['id'=>$id]);
         }
+        if($operation==='approve'){
+            Fact\Review::approve((int)($input['id']??0));session_write_close();Process::launchWorker();json(['ok'=>true]);
+        }
         if($operation==='retry'){
             $job=db()->job((int)($input['id']??0));if(!in_array($job['status'],['blocked','ready','failed'],true)){throw new RuntimeException('This job cannot be retried while it is active.');}
             if($job['status']==='ready'&&$job['mode']!=='live'){throw new RuntimeException('This preview is already finished.');}
             $updated=db()->query("UPDATE jobs SET status='queued',error=NULL,updated_at=? WHERE id=? AND status IN ('blocked','ready','failed')",[Fact\now(),(int)$job['id']]);if($updated->rowCount()!==1){throw new RuntimeException('This job already started. Refresh its status.');}db()->event((int)$job['id'],'Retry requested. Reusing saved scenes, narration and upload sessions.');session_write_close();Process::launchWorker();json(['ok'=>true]);
         }
-        if($operation==='cancel'){$id=(int)($input['id']??0);$updated=db()->query("UPDATE jobs SET status='skipped',error=NULL,updated_at=? WHERE id=? AND status IN ('queued','blocked')",[Fact\now(),$id]);if($updated->rowCount()!==1){throw new RuntimeException('Only queued or blocked jobs can be removed from production. This job may already have started.');}json(['ok'=>true]);}
+        if($operation==='cancel'){$id=(int)($input['id']??0);$updated=db()->query("UPDATE jobs SET status='skipped',error=NULL,updated_at=? WHERE id=? AND status IN ('queued','blocked','ready')",[Fact\now(),$id]);if($updated->rowCount()!==1){throw new RuntimeException('Only queued, blocked or finished unpublished jobs can be skipped. This job may already have started.');}db()->event($id,'Video skipped. Its saved files remain in the library.');json(['ok'=>true]);}
         if($operation==='worker'){session_write_close();Process::launchWorker();json(['ok'=>true]);}
         if($operation==='settings'){settings()->save($input['values']??[]);if(is_file(storage('health.json'))){unlink(storage('health.json'));}json(['ok'=>true]);}
         if($operation==='clear_secret'){$key=(string)($input['key']??'');if(!in_array($key,Fact\Settings::SECRETS,true)){throw new RuntimeException('Unknown credential.');}settings()->set($key,'');json(['ok'=>true]);}
